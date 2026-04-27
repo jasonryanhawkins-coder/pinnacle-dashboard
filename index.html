@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pinnacle Diagnostics — Contract Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1F3864;
+      --blue: #2E5496;
+      --gold: #C9A84C;
+      --light-blue: #D9E2F3;
+      --light-gold: #FFF2CC;
+      --green: #1E7145;
+      --light-green: #E2EFDA;
+      --orange: #C55A11;
+      --light-orange: #FCE4D6;
+      --red: #C00000;
+      --light-red: #FFE0E0;
+      --purple: #7030A0;
+      --light-purple: #F2EAFA;
+      --gray: #444444;
+      --med-gray: #777777;
+      --light-gray: #F5F5F5;
+      --border: #E0E0E0;
+      --white: #ffffff;
+      --bg: #F8F9FA;
+      --card-bg: #ffffff;
+      --text: #1a1a1a;
+      --text-secondary: #555555;
+      --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    .app-header {
+      background: var(--navy);
+      padding: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+    .header-brand { display: flex; align-items: center; gap: 12px; }
+    .header-logo {
+      width: 36px; height: 36px;
+      background: var(--gold);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; color: var(--navy);
+    }
+    .header-title { color: white; font-size: 16px; font-weight: 600; }
+    .header-subtitle { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 1px; }
+    .header-badge {
+      background: var(--orange);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .gold-line { height: 3px; background: var(--gold); }
+
+    /* MAIN LAYOUT */
+    .main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* API SETUP */
+    .setup-section { margin-bottom: 24px; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 14px; font-weight: 600; color: var(--navy);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--gold);
+    }
+    .api-row { display: flex; gap: 10px; margin-bottom: 8px; }
+    .api-input {
+      flex: 1; padding: 10px 14px;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 14px; color: var(--text);
+      background: var(--light-gray);
+      transition: border-color 0.2s;
+    }
+    .api-input:focus { outline: none; border-color: var(--blue); background: white; }
+    .btn {
+      padding: 10px 18px; border-radius: 8px; font-size: 14px;
+      font-weight: 500; cursor: pointer; border: 1px solid var(--border);
+      background: white; color: var(--text);
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .btn:hover { background: var(--light-gray); }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--navy); color: white; border-color: var(--navy); }
+    .btn-primary:hover { background: var(--blue); border-color: var(--blue); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-gold { background: var(--gold); color: var(--navy); border-color: var(--gold); font-weight: 600; }
+    .btn-gold:hover { background: #B8972A; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-danger { background: var(--light-red); color: var(--red); border-color: #F09595; }
+    .hint { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .hint a { color: var(--blue); text-decoration: none; }
+    .hint a:hover { text-decoration: underline; }
+
+    /* CONNECTED STATE */
+    .connected-bar {
+      display: none; align-items: center; gap: 10px;
+      background: var(--light-green);
+      border: 1px solid #A8D5B0;
+      border-radius: 8px; padding: 10px 16px;
+      font-size: 13px; color: var(--green);
+      margin-bottom: 8px;
+    }
+    .connected-bar.visible { display: flex; }
+    .connected-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* FILTERS */
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px; margin-bottom: 16px;
+    }
+    .filter-group label {
+      display: block; font-size: 11px; font-weight: 600;
+      color: var(--text-secondary); margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .filter-group select, .filter-group input {
+      width: 100%; padding: 8px 10px;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 13px; background: white; color: var(--text);
+      cursor: pointer;
+    }
+    .filter-group select:focus, .filter-group input:focus {
+      outline: none; border-color: var(--blue);
+    }
+    .filter-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+    /* STATS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px; margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .stat-card.highlight { border-left: 4px solid var(--gold); }
+    .stat-label { font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .stat-value { font-size: 28px; font-weight: 700; color: var(--navy); line-height: 1; }
+    .stat-sub { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+    .tab {
+      padding: 10px 18px; font-size: 13px; font-weight: 500;
+      cursor: pointer; background: none; border: none;
+      color: var(--text-secondary); border-bottom: 3px solid transparent;
+      margin-bottom: -2px; transition: all 0.15s;
+    }
+    .tab:hover { color: var(--navy); }
+    .tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+    .tab .count {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 10px;
+      background: var(--light-gray); font-size: 11px;
+      margin-left: 6px; color: var(--text-secondary);
+    }
+    .tab.active .count { background: var(--navy); color: white; }
+
+    /* RESULTS */
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .results-count { font-size: 13px; color: var(--text-secondary); }
+    .sort-select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; }
+
+    .contract-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px 20px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .contract-card:hover { border-color: var(--blue); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .contract-card.priority { border-left: 4px solid var(--gold); }
+
+    .contract-top {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; gap: 12px; margin-bottom: 10px;
+    }
+    .contract-title { font-size: 15px; font-weight: 600; color: var(--navy); line-height: 1.4; flex: 1; }
+    .badges { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+
+    .badge {
+      font-size: 10px; padding: 3px 9px; border-radius: 20px;
+      font-weight: 600; white-space: nowrap; letter-spacing: 0.3px;
+    }
+    .badge-sdvosb { background: #EEF4FF; color: #1e40af; border: 1px solid #BFDBFE; }
+    .badge-vosb { background: var(--light-green); color: var(--green); border: 1px solid #A8D5B0; }
+    .badge-sb { background: var(--light-gold); color: #92400e; border: 1px solid #FDE68A; }
+    .badge-open { background: var(--light-green); color: var(--green); border: 1px solid #A8D5B0; }
+    .badge-closing { background: var(--light-orange); color: var(--orange); border: 1px solid #FDB97D; }
+    .badge-urgent { background: var(--light-red); color: var(--red); border: 1px solid #F09595; animation: blink 1.5s infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .badge-closed { background: var(--light-gray); color: var(--med-gray); border: 1px solid #D0D0D0; }
+    .badge-naics { background: var(--light-purple); color: var(--purple); border: 1px solid #C5A3D9; }
+    .badge-sources { background: #FEF3C7; color: #92400e; border: 1px solid #FDE68A; }
+    .badge-rfq { background: var(--light-blue); color: var(--blue); border: 1px solid #93C5FD; }
+
+    .contract-meta {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;
+    }
+    .meta-item { display: flex; align-items: center; gap: 4px; }
+
+    .contract-desc {
+      font-size: 13px; color: var(--text-secondary);
+      line-height: 1.6; margin-bottom: 12px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .contract-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .ai-analysis {
+      background: linear-gradient(135deg, #F0F4FF, #F8F0FF);
+      border: 1px solid #C5B3E8;
+      border-radius: 10px; padding: 14px 16px;
+      margin-top: 12px; display: none;
+    }
+    .ai-analysis.visible { display: block; }
+    .ai-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--purple); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ai-content { font-size: 13px; color: var(--gray); line-height: 1.6; white-space: pre-wrap; }
+    .ai-loading { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+    .ai-spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* LOADING / EMPTY / ERROR */
+    .loading-state { text-align: center; padding: 48px 24px; }
+    .loading-spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--navy); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    .loading-text { font-size: 14px; color: var(--text-secondary); }
+
+    .empty-state { text-align: center; padding: 48px 24px; }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-title { font-size: 18px; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+    .empty-text { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+
+    .error-banner {
+      background: var(--light-red);
+      border: 1px solid #F09595;
+      border-radius: 10px; padding: 14px 18px;
+      font-size: 13px; color: var(--red);
+      margin-bottom: 16px; display: none;
+      line-height: 1.5;
+    }
+    .error-banner.visible { display: block; }
+
+    /* DEADLINE PROGRESS */
+    .deadline-track { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+    .deadline-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+
+    /* WELCOME SCREEN */
+    .welcome {
+      text-align: center; padding: 48px 24px;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow);
+    }
+    .welcome-logo {
+      width: 72px; height: 72px; background: var(--navy);
+      border-radius: 16px; margin: 0 auto 20px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .welcome-logo span { font-size: 28px; font-weight: 700; color: var(--gold); }
+    .welcome h2 { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .welcome p { font-size: 14px; color: var(--text-secondary); max-width: 480px; margin: 0 auto 24px; line-height: 1.6; }
+    .welcome-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; max-width: 600px; margin: 0 auto 24px; }
+    .step {
+      background: var(--light-gray); border-radius: 10px; padding: 16px;
+      text-align: left;
+    }
+    .step-num { font-size: 24px; font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+    .step-title { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
+    .step-text { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+
+    /* FOOTER */
+    .app-footer {
+      background: var(--navy); color: rgba(255,255,255,0.5);
+      text-align: center; padding: 16px;
+      font-size: 11px; margin-top: 48px;
+    }
+    .app-footer span { color: var(--gold); }
+
+    /* RESPONSIVE */
+    @media (max-width: 600px) {
+      .main { padding: 16px; }
+      .header-inner { padding: 0 16px; }
+      .contract-top { flex-direction: column; }
+      .badges { justify-content: flex-start; }
+    }
+
+    /* INSTRUCTIONS MODAL */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 1000;
+      display: none; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal {
+      background: white; border-radius: 16px; padding: 28px;
+      max-width: 540px; width: 100%; max-height: 80vh;
+      overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .modal h3 { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 16px; }
+    .modal ol { padding-left: 20px; }
+    .modal li { font-size: 14px; color: var(--gray); line-height: 1.7; margin-bottom: 8px; }
+    .modal li strong { color: var(--navy); }
+    .modal-close { float: right; background: var(--light-gray); border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--gray); }
+    .modal-close:hover { background: var(--border); }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <div class="header-logo">PD</div>
+      <div>
+        <div class="header-title">Pinnacle Diagnostics, LLC</div>
+        <div class="header-subtitle">Federal Contract Opportunity Dashboard</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="header-badge">SDVOSB PENDING</span>
+      <button class="btn btn-sm" onclick="showHelp()" style="background:rgba(255,255,255,0.1);color:white;border-color:rgba(255,255,255,0.2);">? Help</button>
+    </div>
+  </div>
+  <div class="gold-line"></div>
+</header>
+
+<main class="main">
+
+  <!-- API SETUP -->
+  <div class="setup-section">
+    <div class="card">
+      <div class="card-title"><div class="dot"></div> SAM.gov API Connection</div>
+      <div id="connectedBar" class="connected-bar">
+        <div class="connected-dot"></div>
+        <span>Connected to SAM.gov — API key active</span>
+        <button class="btn btn-sm btn-danger" onclick="disconnect()" style="margin-left:auto;">Disconnect</button>
+      </div>
+      <div id="apiSetupForm">
+        <div class="api-row">
+          <input type="password" id="apiKey" class="api-input" placeholder="Paste your SAM.gov API key here..." />
+          <button class="btn btn-gold" onclick="connectApi()">Connect &#8594;</button>
+        </div>
+        <p class="hint">Get your free API key: <a href="https://sam.gov/profile/details" target="_blank">sam.gov/profile/details</a> &rarr; System Account &rarr; Request API Key &nbsp;|&nbsp; No cost &nbsp;|&nbsp; <a href="#" onclick="showHelp()">Need help? Click here</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="card" style="margin-bottom:24px;">
+    <div class="card-title"><div class="dot"></div> Search Filters</div>
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label>NAICS Code</label>
+        <select id="naicsFilter">
+          <option value="621511,541380">All (621511 + 541380)</option>
+          <option value="621511">621511 &mdash; Medical Labs</option>
+          <option value="541380">541380 &mdash; Testing Labs</option>
+          <option value="621999">621999 &mdash; Ambulatory Health</option>
+          <option value="541690">541690 &mdash; Scientific Consulting</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Set-Aside Type</label>
+        <select id="setAsideFilter">
+          <option value="SDVOSBC">SDVOSB Only</option>
+          <option value="">All Set-Asides</option>
+          <option value="VOSBC">VOSB</option>
+          <option value="SBP">Small Business</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>State</label>
+        <select id="stateFilter">
+          <option value="">All States (Nationwide)</option>
+          <option value="TN" selected>Tennessee</option>
+          <option value="AL">Alabama</option>
+          <option value="KY">Kentucky</option>
+          <option value="GA">Georgia</option>
+          <option value="VA">Virginia</option>
+          <option value="DC">Washington DC</option>
+          <option value="TX">Texas</option>
+          <option value="FL">Florida</option>
+          <option value="CA">California</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Keywords</label>
+        <input type="text" id="keywordFilter" placeholder="e.g. laboratory, testing" value="laboratory" />
+      </div>
+      <div class="filter-group">
+        <label>Max Results</label>
+        <select id="limitFilter">
+          <option value="10">10 results</option>
+          <option value="25" selected>25 results</option>
+          <option value="50">50 results</option>
+          <option value="100">100 results</option>
+        </select>
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" onclick="runSearch()" id="searchBtn">&#128269; Search SAM.gov</button>
+      <button class="btn" onclick="resetFilters()">Reset Filters</button>
+      <button class="btn" onclick="searchNationwide()">&#127758; Search Nationwide</button>
+      <button class="btn" onclick="searchClosingSoon()">&#9201; Closing This Week</button>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div id="errorBanner" class="error-banner"></div>
+
+  <!-- STATS -->
+  <div id="statsSection" style="display:none;">
+    <div class="stats-grid">
+      <div class="stat-card highlight">
+        <div class="stat-label">Total Found</div>
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-sub">opportunities</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">SDVOSB Set-Aside</div>
+        <div class="stat-value" id="statSdvosb" style="color:var(--blue)">0</div>
+        <div class="stat-sub">for you specifically</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Closing &lt; 7 Days</div>
+        <div class="stat-value" id="statClosing" style="color:var(--orange)">0</div>
+        <div class="stat-sub">act fast</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">In Tennessee</div>
+        <div class="stat-value" id="statTn" style="color:var(--green)">0</div>
+        <div class="stat-sub">local opportunities</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sources Sought</div>
+        <div class="stat-value" id="statSources" style="color:var(--purple)">0</div>
+        <div class="stat-sub">market research</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div id="tabSection" style="display:none;">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('all',this)" id="tab-all">
+        All <span class="count" id="cnt-all">0</span>
+      </button>
+      <button class="tab" onclick="switchTab('sdvosb',this)" id="tab-sdvosb">
+        SDVOSB <span class="count" id="cnt-sdvosb">0</span>
+      </button>
+      <button class="tab" onclick="switchTab('closing',this)" id="tab-closing">
+        Closing Soon <span class="count" id="cnt-closing">0</span>
+      </button>
+      <button class="tab" onclick="switchTab('tn',this)" id="tab-tn">
+        Tennessee <span class="count" id="cnt-tn">0</span>
+      </button>
+      <button class="tab" onclick="switchTab('sources',this)" id="tab-sources">
+        Sources Sought <span class="count" id="cnt-sources">0</span>
+      </button>
+    </div>
+    <div class="results-header">
+      <div class="results-count" id="resultsCount"></div>
+      <select class="sort-select" id="sortSelect" onchange="sortResults()">
+        <option value="deadline">Sort: Deadline (soonest)</option>
+        <option value="title">Sort: Title A-Z</option>
+        <option value="agency">Sort: Agency</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsContainer">
+    <!-- Welcome screen -->
+    <div class="welcome">
+      <div class="welcome-logo"><span>PD</span></div>
+      <h2>Welcome, Jason</h2>
+      <p>Your personal SAM.gov contract intelligence dashboard. Enter your API key above to search for SDVOSB-eligible federal contract opportunities matching Pinnacle Diagnostics' capabilities.</p>
+      <div class="welcome-steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-title">Get API Key</div>
+          <div class="step-text">Visit sam.gov &rarr; Profile &rarr; System Account &rarr; Request API Key (free)</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-title">Connect</div>
+          <div class="step-text">Paste your API key above and click Connect</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-title">Search</div>
+          <div class="step-text">Filter by NAICS, set-aside type, state, and keywords</div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-title">Analyze</div>
+          <div class="step-text">Click &ldquo;Analyze with Claude&rdquo; for AI-powered contract fit analysis</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-secondary);">
+        <strong>Your NAICS Codes:</strong> 621511 (Medical Labs) &bull; 541380 (Testing Labs)<br>
+        <strong>EIN:</strong> 42-2165181 &bull; <strong>SOS:</strong> 002107687 &bull; <strong>Status:</strong> SDVOSB Pending VetCert
+      </p>
+    </div>
+  </div>
+
+</main>
+
+<footer class="app-footer">
+  <span>Pinnacle Diagnostics, LLC</span> &bull; EIN: 42-2165181 &bull; SOS: 002107687 &bull; Nashville, TN &bull; NAICS: 621511 | 541380 &bull; SDVOSB Pending &bull; Jason Ryan Hawkins, Managing Member
+</footer>
+
+<!-- HELP MODAL -->
+<div id="helpModal" class="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeHelp()">&#10005; Close</button>
+    <h3>How to Get Your SAM.gov API Key</h3>
+    <ol>
+      <li><strong>Go to sam.gov</strong> and log into your account (create one tomorrow if you haven't yet)</li>
+      <li>Click your <strong>profile icon</strong> in the top right corner</li>
+      <li>Click <strong>"Profile Details"</strong> from the dropdown</li>
+      <li>Scroll down to <strong>"System Account"</strong> section</li>
+      <li>Click <strong>"Request System Account"</strong> or <strong>"Add System Account"</strong></li>
+      <li>Fill in the system account name (e.g. "Pinnacle Dashboard") and select <strong>"Public"</strong> access</li>
+      <li>Under permissions, select <strong>"Opportunities Read"</strong> and <strong>"Entity Read"</strong></li>
+      <li>Submit the request — your API key will be displayed immediately or emailed within minutes</li>
+      <li>Copy the API key and <strong>paste it into this dashboard</strong></li>
+    </ol>
+    <br>
+    <p style="font-size:13px;color:var(--text-secondary);">The API key is completely free. SAM.gov allows 1,000 requests per day on the free tier — more than enough for daily searches.</p>
+    <br>
+    <p style="font-size:13px;color:var(--text-secondary);">Need help? Call the Federal Service Desk: <strong>1-866-606-8220</strong></p>
+  </div>
+</div>
+
+<script>
+let allResults = [];
+let currentTab = 'all';
+let savedApiKey = localStorage.getItem('pinnacle_sam_key') || '';
+
+window.onload = function() {
+  if (savedApiKey) {
+    document.getElementById('apiKey').value = savedApiKey;
+    showConnected();
+  }
+};
+
+function connectApi() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { showError('Please enter your SAM.gov API key.'); return; }
+  savedApiKey = key;
+  localStorage.setItem('pinnacle_sam_key', key);
+  showConnected();
+  runSearch();
+}
+
+function showConnected() {
+  document.getElementById('apiSetupForm').style.display = 'none';
+  document.getElementById('connectedBar').classList.add('visible');
+}
+
+function disconnect() {
+  savedApiKey = '';
+  localStorage.removeItem('pinnacle_sam_key');
+  document.getElementById('apiKey').value = '';
+  document.getElementById('apiSetupForm').style.display = 'block';
+  document.getElementById('connectedBar').classList.remove('visible');
+  document.getElementById('statsSection').style.display = 'none';
+  document.getElementById('tabSection').style.display = 'none';
+  document.getElementById('resultsContainer').innerHTML = '<div class="welcome"><div class="welcome-logo"><span>PD</span></div><h2>Disconnected</h2><p>Enter your API key above to reconnect.</p></div>';
+}
+
+async function runSearch() {
+  const key = savedApiKey || document.getElementById('apiKey').value.trim();
+  if (!key) { showError('Please enter your SAM.gov API key first.'); return; }
+  savedApiKey = key;
+
+  hideError();
+  document.getElementById('resultsContainer').innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><div class="loading-text">Searching SAM.gov for opportunities...</div></div>';
+  document.getElementById('statsSection').style.display = 'none';
+  document.getElementById('tabSection').style.display = 'none';
+
+  const naics = document.getElementById('naicsFilter').value;
+  const setAside = document.getElementById('setAsideFilter').value;
+  const state = document.getElementById('stateFilter').value;
+  const keyword = document.getElementById('keywordFilter').value.trim();
+  const limit = document.getElementById('limitFilter').value;
+  const naicsList = naics.split(',');
+  let combined = [];
+
+  for (const n of naicsList) {
+    try {
+      let url = `https://api.sam.gov/opportunities/v2/search?api_key=${encodeURIComponent(key)}&limit=${limit}&naics=${n.trim()}&active=true`;
+      if (setAside) url += `&typeOfSetAsideCode=${setAside}`;
+      if (keyword) url += `&q=${encodeURIComponent(keyword)}`;
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        if (resp.status === 401 || resp.status === 403) {
+          showError('Invalid or unauthorized API key. Please check your SAM.gov API key. Make sure your System Account has "Opportunities" read access enabled.');
+          document.getElementById('resultsContainer').innerHTML = '';
+          return;
+        }
+        showError(`SAM.gov returned error ${resp.status}: ${errData.errorMessage || errData.description || 'Please try again.'}`);
+        document.getElementById('resultsContainer').innerHTML = '';
+        return;
+      }
+      const data = await resp.json();
+      if (data.opportunitiesData) combined = combined.concat(data.opportunitiesData);
+    } catch(e) {
+      showError('Could not connect to SAM.gov. Please check your internet connection and try again.');
+      document.getElementById('resultsContainer').innerHTML = '';
+      return;
+    }
+  }
+
+  const seen = new Set();
+  combined = combined.filter(o => { if (seen.has(o.noticeId)) return false; seen.add(o.noticeId); return true; });
+
+  if (state) {
+    combined = combined.filter(o => {
+      if (!o.placeOfPerformance) return false;
+      const s = (o.placeOfPerformance.state || {}).code || '';
+      return s === state;
+    });
+  }
+
+  allResults = combined;
+  renderStats();
+  renderTabs();
+  renderResults(filterResults(currentTab));
+  document.getElementById('statsSection').style.display = 'block';
+  document.getElementById('tabSection').style.display = 'block';
+}
+
+function filterResults(tab) {
+  const now = new Date();
+  const in7 = new Date(now.getTime() + 7 * 86400000);
+  if (tab === 'sdvosb') return allResults.filter(o => (o.typeOfSetAside || '').toUpperCase().includes('SDVOSB'));
+  if (tab === 'closing') return allResults.filter(o => { if (!o.responseDeadLine) return false; const d = new Date(o.responseDeadLine); return d > now && d <= in7; });
+  if (tab === 'tn') return allResults.filter(o => { const pl = o.placeOfPerformance; return pl && (pl.state || {}).code === 'TN'; });
+  if (tab === 'sources') return allResults.filter(o => (o.type || '').toLowerCase().includes('sources') || (o.title || '').toLowerCase().includes('sources sought'));
+  return allResults;
+}
+
+function renderStats() {
+  const now = new Date();
+  const in7 = new Date(now.getTime() + 7 * 86400000);
+  document.getElementById('statTotal').textContent = allResults.length;
+  document.getElementById('statSdvosb').textContent = allResults.filter(o => (o.typeOfSetAside || '').toUpperCase().includes('SDVOSB')).length;
+  document.getElementById('statClosing').textContent = allResults.filter(o => { if (!o.responseDeadLine) return false; const d = new Date(o.responseDeadLine); return d > now && d <= in7; }).length;
+  document.getElementById('statTn').textContent = allResults.filter(o => { const pl = o.placeOfPerformance; return pl && (pl.state || {}).code === 'TN'; }).length;
+  document.getElementById('statSources').textContent = allResults.filter(o => (o.type || '').toLowerCase().includes('sources') || (o.title || '').toLowerCase().includes('sources sought')).length;
+}
+
+function renderTabs() {
+  const now = new Date();
+  const in7 = new Date(now.getTime() + 7 * 86400000);
+  document.getElementById('cnt-all').textContent = allResults.length;
+  document.getElementById('cnt-sdvosb').textContent = allResults.filter(o => (o.typeOfSetAside||'').toUpperCase().includes('SDVOSB')).length;
+  document.getElementById('cnt-closing').textContent = allResults.filter(o => { if(!o.responseDeadLine) return false; const d=new Date(o.responseDeadLine); return d>now&&d<=in7; }).length;
+  document.getElementById('cnt-tn').textContent = allResults.filter(o => { const pl=o.placeOfPerformance; return pl&&(pl.state||{}).code==='TN'; }).length;
+  document.getElementById('cnt-sources').textContent = allResults.filter(o => (o.type||'').toLowerCase().includes('sources')||(o.title||'').toLowerCase().includes('sources sought')).length;
+}
+
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderResults(filterResults(tab));
+}
+
+function sortResults() {
+  const sort = document.getElementById('sortSelect').value;
+  const filtered = filterResults(currentTab);
+  if (sort === 'deadline') filtered.sort((a,b) => { const da = a.responseDeadLine ? new Date(a.responseDeadLine) : new Date('2099'); const db = b.responseDeadLine ? new Date(b.responseDeadLine) : new Date('2099'); return da - db; });
+  else if (sort === 'title') filtered.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+  else if (sort === 'agency') filtered.sort((a,b) => { const aa = a.organizationHierarchy&&a.organizationHierarchy.length?a.organizationHierarchy[0].name:''; const ba = b.organizationHierarchy&&b.organizationHierarchy.length?b.organizationHierarchy[0].name:''; return aa.localeCompare(ba); });
+  renderResults(filtered);
+}
+
+function renderResults(opps) {
+  const container = document.getElementById('resultsContainer');
+  document.getElementById('resultsCount').textContent = `${opps.length} opportunit${opps.length===1?'y':'ies'} found`;
+
+  if (!opps.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div class="empty-title">No opportunities found</div><div class="empty-text">Try adjusting your filters or searching nationwide to see more results.</div><button class="btn btn-primary" onclick="searchNationwide()">Search Nationwide</button></div>';
+    return;
+  }
+
+  const now = new Date();
+  container.innerHTML = opps.map((o, i) => {
+    const idx = allResults.indexOf(o);
+    const deadline = o.responseDeadLine ? new Date(o.responseDeadLine) : null;
+    const daysLeft = deadline ? Math.ceil((deadline - now) / 86400000) : null;
+    const setAside = (o.typeOfSetAside || '').toUpperCase();
+    const isSdvosb = setAside.includes('SDVOSB');
+    const isVosb = setAside.includes('VOSB') && !isSdvosb;
+    const isSources = (o.type||'').toLowerCase().includes('sources') || (o.title||'').toLowerCase().includes('sources sought');
+    const isRfq = (o.type||'').toLowerCase().includes('rfq') || (o.type||'').toLowerCase().includes('solicitation');
+    const isPriority = isSdvosb && daysLeft !== null && daysLeft > 0 && daysLeft <= 14;
+
+    let deadlineBadge = '';
+    let deadlineBar = '';
+    if (daysLeft !== null) {
+      if (daysLeft < 0) deadlineBadge = '<span class="badge badge-closed">Closed</span>';
+      else if (daysLeft <= 2) deadlineBadge = `<span class="badge badge-urgent">URGENT — ${daysLeft}d left</span>`;
+      else if (daysLeft <= 7) deadlineBadge = `<span class="badge badge-closing">Closes in ${daysLeft}d</span>`;
+      else deadlineBadge = `<span class="badge badge-open">${daysLeft}d remaining</span>`;
+      const pct = Math.min(100, Math.max(0, ((30 - daysLeft) / 30) * 100));
+      const fillColor = daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--orange)' : 'var(--green)';
+      deadlineBar = `<div class="deadline-track"><div class="deadline-fill" style="width:${Math.round(pct)}%;background:${fillColor};"></div></div>`;
+    }
+
+    const sdvosbBadge = isSdvosb ? '<span class="badge badge-sdvosb">SDVOSB</span>' : isVosb ? '<span class="badge badge-vosb">VOSB</span>' : '<span class="badge badge-sb">Small Business</span>';
+    const typeBadge = isSources ? '<span class="badge badge-sources">Sources Sought</span>' : isRfq ? '<span class="badge badge-rfq">RFQ</span>' : '';
+    const naicsBadge = o.naicsCode ? `<span class="badge badge-naics">${o.naicsCode}</span>` : '';
+    const agency = o.organizationHierarchy && o.organizationHierarchy.length ? o.organizationHierarchy[0].name : (o.fullParentPathName || 'Federal Agency');
+    const place = o.placeOfPerformance ? [(o.placeOfPerformance.city||{}).name, (o.placeOfPerformance.state||{}).code].filter(Boolean).join(', ') : '';
+    const desc = (o.description || o.synopsis || '').replace(/<[^>]*>/g,'');
+    const shortDesc = desc.length > 200 ? desc.substring(0,200)+'...' : desc;
+
+    return `<div class="contract-card ${isPriority ? 'priority' : ''}" id="card-${idx}">
+      <div class="contract-top">
+        <div class="contract-title">${escHtml(o.title || 'Untitled Opportunity')}</div>
+        <div class="badges">${sdvosbBadge}${naicsBadge}${typeBadge}${deadlineBadge}</div>
+      </div>
+      <div class="contract-meta">
+        <span class="meta-item">&#127970; ${escHtml(agency)}</span>
+        ${place ? `<span class="meta-item">&#128205; ${escHtml(place)}</span>` : ''}
+        ${deadline ? `<span class="meta-item">&#128197; Due: ${deadline.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : '<span class="meta-item">&#128197; No deadline listed</span>'}
+        ${o.solicitationNumber ? `<span class="meta-item">&#35; ${escHtml(o.solicitationNumber)}</span>` : ''}
+      </div>
+      ${shortDesc ? `<div class="contract-desc">${escHtml(shortDesc)}</div>` : ''}
+      ${deadlineBar}
+      <div class="contract-actions" style="margin-top:12px;">
+        <button class="btn btn-primary btn-sm" onclick="analyzeContract(${idx})">&#129302; Analyze with Claude</button>
+        <button class="btn btn-sm" onclick="viewOnSam('${escAttr(o.uiLink||'')}','${escAttr(o.solicitationNumber||'')}')">&#128279; View on SAM.gov</button>
+        <button class="btn btn-sm" onclick="draftResponse(${idx})">&#9993; Draft Response</button>
+        ${o.pointOfContact && o.pointOfContact.length ? `<button class="btn btn-sm" onclick="showContact(${idx})">&#128222; Contact Info</button>` : ''}
+      </div>
+      <div class="ai-analysis" id="ai-${idx}">
+        <div class="ai-label">&#129302; Claude AI Contract Analysis</div>
+        <div class="ai-content" id="ai-content-${idx}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function analyzeContract(idx) {
+  const o = allResults[idx];
+  if (!o) return;
+  const title = o.title || 'this contract';
+  const naics = o.naicsCode || 'unknown';
+  const setAside = o.typeOfSetAside || 'unknown';
+  const agency = o.organizationHierarchy && o.organizationHierarchy.length ? o.organizationHierarchy[0].name : 'Federal Agency';
+  const deadline = o.responseDeadLine ? new Date(o.responseDeadLine).toLocaleDateString() : 'unknown';
+  const place = o.placeOfPerformance ? [(o.placeOfPerformance.city||{}).name,(o.placeOfPerformance.state||{}).code].filter(Boolean).join(', ') : 'unknown';
+  const sol = o.solicitationNumber || '';
+  const desc = (o.description || o.synopsis || '').replace(/<[^>]*>/g,'').substring(0,500);
+  const prompt = `Analyze this SAM.gov contract for Pinnacle Diagnostics LLC (Nashville TN, SDVOSB pending VetCert, EIN 42-2165181, NAICS 621511 Medical Labs + 541380 Testing Labs, Managing Member Jason Hawkins):
+
+Title: "${title}"
+Solicitation: ${sol}
+Agency: ${agency}
+NAICS: ${naics}
+Set-Aside: ${setAside}
+Location: ${place}
+Deadline: ${deadline}
+Description: ${desc}
+
+Please analyze: 1) Is this a good fit for Pinnacle? 2) Key requirements and certifications needed? 3) Estimated contract value? 4) Should we bid — yes/no and why? 5) Next steps if we pursue it.`;
+  
+  alert('Opening Claude analysis in chat...\n\nThe contract details have been sent to Claude for analysis. Check the chat window.');
+  if (typeof sendPrompt === 'function') sendPrompt(prompt);
+}
+
+function draftResponse(idx) {
+  const o = allResults[idx];
+  if (!o) return;
+  const title = o.title || 'this contract';
+  const sol = o.solicitationNumber || 'unknown';
+  const agency = o.organizationHierarchy && o.organizationHierarchy.length ? o.organizationHierarchy[0].name : 'the contracting agency';
+  const poc = o.pointOfContact && o.pointOfContact.length ? o.pointOfContact[0] : null;
+  const pocInfo = poc ? `POC: ${poc.fullName||''} | ${poc.email||''} | ${poc.phone||''}` : '';
+  const prompt = `Draft a professional response email for this SAM.gov opportunity for Pinnacle Diagnostics LLC:
+
+Title: "${title}"
+Solicitation: ${sol}
+Agency: ${agency}
+${pocInfo}
+
+Company info to include:
+- Pinnacle Diagnostics, LLC | Nashville, TN
+- EIN: 42-2165181 | SOS: 002107687
+- NAICS: 621511 (Medical Labs) + 541380 (Testing Labs)
+- SDVOSB VetCert application in progress (expected mid-May 2026)
+- SAM.gov registration in progress
+- Services: Clinical lab testing, drug/alcohol testing, COVID/respiratory testing, blood panels, pathology services
+- Managing Member: Jason Ryan Hawkins (100% service-disabled veteran)`;
+
+  alert('Opening Claude draft in chat...\n\nSending contract details to Claude to draft your response email.');
+  if (typeof sendPrompt === 'function') sendPrompt(prompt);
+}
+
+function viewOnSam(link, sol) {
+  const url = link || (sol ? `https://sam.gov/opp/${sol}/view` : 'https://sam.gov/search/?index=opp&sort=-modifiedDate&sfm[simpleSearch][naicsCode]=621511');
+  window.open(url, '_blank');
+}
+
+function showContact(idx) {
+  const o = allResults[idx];
+  if (!o || !o.pointOfContact || !o.pointOfContact.length) return;
+  const poc = o.pointOfContact[0];
+  alert(`Contracting Officer Contact:\n\nName: ${poc.fullName||'Not listed'}\nEmail: ${poc.email||'Not listed'}\nPhone: ${poc.phone||'Not listed'}\nTitle: ${poc.title||'Not listed'}`);
+}
+
+function searchNationwide() {
+  document.getElementById('stateFilter').value = '';
+  runSearch();
+}
+
+function searchClosingSoon() {
+  document.getElementById('stateFilter').value = '';
+  document.getElementById('setAsideFilter').value = '';
+  runSearch().then(() => {
+    const closingTab = document.querySelector('[onclick="switchTab(\'closing\',this)"]');
+    if (closingTab) switchTab('closing', closingTab);
+  });
+}
+
+function resetFilters() {
+  document.getElementById('naicsFilter').value = '621511,541380';
+  document.getElementById('setAsideFilter').value = 'SDVOSBC';
+  document.getElementById('stateFilter').value = 'TN';
+  document.getElementById('keywordFilter').value = 'laboratory';
+  document.getElementById('limitFilter').value = '25';
+}
+
+function showHelp() { document.getElementById('helpModal').classList.add('visible'); }
+function closeHelp() { document.getElementById('helpModal').classList.remove('visible'); }
+document.getElementById('helpModal').addEventListener('click', function(e) { if (e.target === this) closeHelp(); });
+
+function showError(msg) {
+  const b = document.getElementById('errorBanner');
+  b.textContent = msg;
+  b.classList.add('visible');
+}
+function hideError() { document.getElementById('errorBanner').classList.remove('visible'); }
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) { return String(s).replace(/'/g,"&#39;"); }
+
+document.getElementById('apiKey').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') connectApi();
+});
+</script>
+
+</body>
+</html>
