@@ -640,7 +640,11 @@ async function runSearch() {
 
   for (const n of naicsList) {
     try {
-      let url = `https://api.sam.gov/opportunities/v2/search?api_key=${encodeURIComponent(key)}&limit=${limit}&naics=${n.trim()}&active=true`;
+      const toDate = new Date();
+      const fromDate = new Date();
+      fromDate.setFullYear(fromDate.getFullYear() - 1);
+      const fmt = d => `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;
+      let url = `https://api.sam.gov/opportunities/v2/search?api_key=${encodeURIComponent(key)}&limit=${limit}&naics=${n.trim()}&active=true&postedFrom=${fmt(fromDate)}&postedTo=${fmt(toDate)}`;
       if (setAside) url += `&typeOfSetAsideCode=${setAside}`;
       if (keyword) url += `&q=${encodeURIComponent(keyword)}`;
       const resp = await fetch(url);
